@@ -112,6 +112,29 @@
     font-size:0.95rem;
   }
 
+  .music-btn{
+    margin-top:14px;
+    background:var(--panel);
+    border:2px solid var(--panel-border);
+    color:var(--text);
+    border-radius:20px;
+    padding:8px 20px;
+    font-size:0.85rem;
+    font-weight:600;
+    cursor:pointer;
+    backdrop-filter:blur(6px);
+    transition:all .2s;
+  }
+  .music-btn:hover{
+    border-color:var(--card-3);
+    transform:scale(1.04);
+  }
+  .music-btn.music-on{
+    background:linear-gradient(90deg, var(--team2-a), var(--team2-b));
+    color:#003539;
+    border-color:transparent;
+  }
+
   /* Scoreboard */
   .scoreboard{
     display:flex;
@@ -448,6 +471,7 @@
   </div>
   <h1>Đấu Trường Khám Phá</h1>
   <p class="subtitle">Lật thẻ - Trả lời - Giành điểm! Môn Tin học</p>
+  <button class="music-btn" id="musicBtn" onclick="toggleMusic()">🔇 Nhạc: Tắt</button>
 </div>
 
 <div class="scoreboard">
@@ -624,6 +648,195 @@ const resetBtn = document.getElementById('resetBtn');
 
 const STAR_ICONS = ['★','◆','●','▲','♦','✦','✶','✷','✸','✹'];
 
+/* ---------- Audio engine ---------- */
+let audioCtx = null;
+let musicNodes = null;
+let musicOn = false;
+
+function getCtx(){
+  if(!audioCtx){
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if(audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+
+function playTone(freq, startTime, duration, type, gainValue){
+  const ctx = getCtx();
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = type;
+  osc.frequency.value = freq;
+  gain.gain.setValueAtTime(0, startTime);
+  gain.gain.linearRampToValueAtTime(gainValue, startTime + 0.02);
+  gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start(startTime);
+  osc.stop(startTime + duration + 0.05);
+}
+
+function playCorrectSound(){
+  const ctx = getCtx();
+  const now = ctx.currentTime;
+  const notes = [523.25, 659.25, 783.99, 1046.50];
+  notes.forEach((freq, i) => {
+    playTone(freq, now + i * 0.09, 0.35, 'triangle', 0.18);
+  });
+}
+
+function playWrongSound(){
+  const ctx = getCtx();
+  const now = ctx.currentTime;
+  playTone(220, now, 0.3, 'sawtooth', 0.15);
+  playTone(160, now + 0.12, 0.4, 'sawtooth', 0.15);
+}
+
+function playFlipSound(){
+  const ctx = getCtx();
+  const now = ctx.currentTime;
+  playTone(880, now, 0.08, 'square', 0.06);
+  playTone(660, now + 0.04, 0.08, 'square', 0.05);
+}
+
+function playWinSound(){
+  const ctx = getCtx();
+  const now = ctx.currentTime;
+  const notes = [523.25, 523.25, 659.25, 783.99, 1046.50, 1318.51];
+  notes.forEach((freq, i) => {
+    playTone(freq, now + i * 0.13, 0.45, 'triangle', 0.16);
+  });
+}
+
+/* Upbeat looping melody with bass and percussion */
+function startMusic(){
+  if(musicNodes) return;
+  const ctx = getCtx();
+  const masterGain = ctx.createGain();
+  masterGain.gain.value = 0.16;
+  masterGain.connect(ctx.destination);
+
+  const BPM = 128;
+  const beat = 60 / BPM;
+  const step = beat / 2; // 8th notes
+
+  // Cheerful chord progression: C - G - Am - F (major/minor mix, bright feel)
+  const melody = [
+    523.25, 587.33, 659.25, 783.99, 659.25, 587.33, 523.25, 659.25,
+    587.33, 659.25, 783.99, 880.00, 783.99, 659.25, 587.33, 523.25,
+    440.00, 493.88, 587.33, 659.25, 587.33, 493.88, 440.00, 587.33,
+    349.23, 440.00, 523.25, 587.33, 523.25, 440.00, 349.23, 440.00
+  ];
+  const bassNotes = [130.81,130.81,196.00,196.00,220.00,220.00,174.61,174.61];
+
+  let melIdx = 0;
+  let bassIdx = 0;
+  let beatCount = 0;
+  const timerIds = [];
+
+  function scheduleMelodyNote(){
+    const now = ctx.currentTime;
+    const freq = melody[melIdx % melody.length];
+    playTone(freq, now, step * 0.9, 'square', 0.05);
+    melIdx++;
+  }
+
+  function scheduleBass(){
+    const now = ctx.currentTime;
+    const freq = bassNotes[bassIdx % bassNotes.length];
+    playTone(freq, now, beat * 0.85, 'triangle', 0.12);
+    if(beatCount % 2 === 1){
+      bassIdx++;
+    }
+  }
+
+  function scheduleKick(){
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(150, now);
+    osc.frequency.exponentialRampToValueAtTime(45, now + 0.15);
+    gain.gain.setValueAtTime(0.35, now);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.18);
+    osc.connect(gain);
+    gain.connect(masterGain);
+    osc.start(now);
+    osc.stop(now + 0.2);
+  }
+
+  function scheduleHat(){
+    const now = ctx.currentTime;
+    const bufferSize = ctx.sampleRate * 0.04;
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for(let i = 0; i < bufferSize; i++){
+      data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize);
+    }
+    const noise = ctx.createBufferSource();
+    noise.buffer = buffer;
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'highpass';
+    filter.frequency.value = 7000;
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.18, now);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.04);
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(masterGain);
+    noise.start(now);
+  }
+
+  // Melody on every 8th note
+  const melTimer = setInterval(scheduleMelodyNote, step * 1000);
+  timerIds.push(melTimer);
+
+  // Bass + kick on every beat (quarter note)
+  const beatTimer = setInterval(() => {
+    scheduleKick();
+    scheduleBass();
+    beatCount++;
+  }, beat * 1000);
+  timerIds.push(beatTimer);
+
+  // Hi-hat on every 8th note, offset
+  const hatTimer = setInterval(scheduleHat, step * 1000);
+  timerIds.push(hatTimer);
+
+  // Kick off first notes immediately
+  scheduleMelodyNote();
+  scheduleKick();
+  scheduleBass();
+  beatCount++;
+
+  musicNodes = {masterGain, timerIds};
+}
+
+function stopMusic(){
+  if(!musicNodes) return;
+  musicNodes.timerIds.forEach(id => clearInterval(id));
+  musicNodes.masterGain.gain.setValueAtTime(0, audioCtx.currentTime);
+  musicNodes = null;
+}
+
+function toggleMusic(){
+  musicOn = !musicOn;
+  if(musicOn){
+    getCtx();
+    startMusic();
+  } else {
+    stopMusic();
+  }
+  updateMusicBtn();
+}
+
+function updateMusicBtn(){
+  const btn = document.getElementById('musicBtn');
+  if(!btn) return;
+  btn.textContent = musicOn ? '🔊 Nhạc: Bật' : '🔇 Nhạc: Tắt';
+  btn.classList.toggle('music-on', musicOn);
+}
+
 function shuffleOptions(q){
   const correctText = q.options[q.correct];
   const shuffled = [...q.options];
@@ -680,6 +893,8 @@ function openQuestion(index, cardEl){
   activeIndex = index;
   locked = true;
 
+  playFlipSound();
+
   const q = questions[index];
   modalTeam.textContent = `Đội ${currentTeam + 1} — Ô số ${index+1}`;
   modalTeam.className = currentTeam === 0 ? 'team1-tag' : 'team2-tag';
@@ -717,9 +932,11 @@ function selectOption(choice, el, cardEl, qIndex){
     resultMsg.classList.add('correct-msg');
     scores[currentTeam] += POINTS;
     bumpScore(currentTeam);
+    playCorrectSound();
   } else {
     resultMsg.innerHTML = `❌ Sai rồi. Đáp án đúng là ${String.fromCharCode(65+q.correct)}`;
     resultMsg.classList.add('wrong-msg');
+    playWrongSound();
   }
 
   updateScores();
@@ -746,6 +963,7 @@ continueBtn.addEventListener('click', () => {
 });
 
 function showWinner(){
+  playWinSound();
   let msg;
   if(scores[0] > scores[1]){
     msg = `Đội 1 chiến thắng!`;
