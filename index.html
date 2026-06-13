@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Đấu Trường Khám Phá</title>
+<style>
+  :root{
+    --bg-1:#1a0b2e;
+    --bg-2:#3d1a5e;
+    --bg-3:#7b2d8e;
+    --panel:rgba(255,255,255,0.06);
+    --panel-border:rgba(255,255,255,0.12);
+    --card-1:#ff6b9d;
+    --card-2:#845ec2;
+    --card-3:#00c2cb;
+    --card-4:#ffc75f;
+    --card-5:#f9f871;
+    --gold:#ffd23f;
+    --text:#fff8f0;
+    --text-dim:#cbb8e0;
+    --correct:#3ddc97;
+    --wrong:#ff5d6c;
+    --team1-a:#ff6b9d;
+    --team1-b:#ff9472;
+    --team2-a:#00c2cb;
+    --team2-b:#4ecdc4;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    font-family:'Poppins','Trebuchet MS','Segoe UI',sans-serif;
+    background:
+      radial-gradient(circle at 15% 20%, rgba(255,107,157,0.25), transparent 40%),
+      radial-gradient(circle at 85% 15%, rgba(0,194,203,0.22), transparent 40%),
+      radial-gradient(circle at 50% 90%, rgba(132,94,194,0.3), transparent 50%),
+      linear-gradient(160deg, var(--bg-1) 0%, var(--bg-2) 55%, var(--bg-3) 100%);
+    background-attachment:fixed;
+    color:var(--text);
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding:24px 16px;
+    overflow-x:hidden;
+  }
+
+  @font-face{
+    font-family:'Poppins';
+    src:local('Poppins');
+  }
+
+  /* Floating decorative blobs */
+  .blob{
+    position:fixed;
+    border-radius:50%;
+    filter:blur(60px);
+    opacity:0.35;
+    z-index:-1;
+    animation:float 14s ease-in-out infinite;
+  }
+  .blob1{width:280px; height:280px; background:#ff6b9d; top:-80px; left:-80px; animation-delay:0s;}
+  .blob2{width:340px; height:340px; background:#00c2cb; bottom:-100px; right:-100px; animation-delay:3s;}
+  .blob3{width:200px; height:200px; background:#ffc75f; top:40%; right:5%; animation-delay:6s;}
+  @keyframes float{
+    0%, 100%{transform:translate(0,0) scale(1);}
+    50%{transform:translate(30px,-30px) scale(1.1);}
+  }
+
+  /* Header */
+  .header{
+    text-align:center;
+    margin-bottom:20px;
+    z-index:1;
+  }
+  .badge-row{
+    display:flex;
+    justify-content:center;
+    gap:8px;
+    margin-bottom:10px;
+    flex-wrap:wrap;
+  }
+  .mini-badge{
+    font-size:0.7rem;
+    padding:4px 12px;
+    border-radius:20px;
+    background:var(--panel);
+    border:1px solid var(--panel-border);
+    color:var(--text-dim);
+    letter-spacing:1px;
+    text-transform:uppercase;
+    backdrop-filter:blur(6px);
+  }
+  h1{
+    font-size:clamp(1.8rem, 5.5vw, 3.2rem);
+    font-weight:800;
+    letter-spacing:1px;
+    background:linear-gradient(90deg,#ff6b9d,#ffc75f,#00c2cb,#845ec2);
+    background-size:300% auto;
+    -webkit-background-clip:text;
+    background-clip:text;
+    color:transparent;
+    animation:shine 6s linear infinite;
+    text-transform:uppercase;
+    margin-bottom:6px;
+  }
+  @keyframes shine{
+    0%{background-position:0% center;}
+    100%{background-position:300% center;}
+  }
+  .subtitle{
+    color:var(--text-dim);
+    font-size:0.95rem;
+  }
+
+  /* Scoreboard */
+  .scoreboard{
+    display:flex;
+    gap:18px;
+    width:100%;
+    max-width:760px;
+    margin:24px 0;
+    z-index:1;
+  }
+  .team{
+    flex:1;
+    border-radius:20px;
+    padding:18px 14px;
+    text-align:center;
+    border:2px solid var(--panel-border);
+    background:var(--panel);
+    backdrop-filter:blur(10px);
+    position:relative;
+    overflow:hidden;
+    transition:all .35s cubic-bezier(.4,0,.2,1);
+  }
+  .team::before{
+    content:'';
+    position:absolute;
+    inset:0;
+    opacity:0;
+    transition:opacity .35s;
+    z-index:0;
+  }
+  .team1::before{background:linear-gradient(135deg, var(--team1-a), var(--team1-b));}
+  .team2::before{background:linear-gradient(135deg, var(--team2-a), var(--team2-b));}
+  .team.active{
+    transform:translateY(-6px) scale(1.03);
+    box-shadow:0 14px 30px rgba(0,0,0,0.35);
+    border-color:rgba(255,255,255,0.4);
+  }
+  .team.active::before{opacity:0.22;}
+  .team-content{position:relative; z-index:1;}
+  .team-icon{
+    font-size:1.8rem;
+    margin-bottom:4px;
+    display:block;
+  }
+  .team-name{
+    font-size:0.85rem;
+    text-transform:uppercase;
+    letter-spacing:2px;
+    font-weight:600;
+    margin-bottom:4px;
+  }
+  .team1 .team-name{color:var(--team1-a);}
+  .team2 .team-name{color:var(--team2-a);}
+  .team-score{
+    font-size:2.6rem;
+    font-weight:800;
+    line-height:1;
+    transition:transform .2s;
+  }
+  .team-score.bump{transform:scale(1.25);}
+  .turn-tag{
+    display:inline-block;
+    margin-top:8px;
+    font-size:0.68rem;
+    padding:4px 14px;
+    border-radius:20px;
+    font-weight:700;
+    letter-spacing:1px;
+    text-transform:uppercase;
+    opacity:0;
+    transform:translateY(4px);
+    transition:all .3s;
+  }
+  .team1 .turn-tag{background:var(--team1-a); color:#3a0d1f;}
+  .team2 .turn-tag{background:var(--team2-a); color:#003539;}
+  .team.active .turn-tag{opacity:1; transform:translateY(0);}
+
+  /* Board */
+  .board{
+    display:grid;
+    grid-template-columns:repeat(5, 1fr);
+    gap:16px;
+    width:100%;
+    max-width:760px;
+    margin-bottom:28px;
+    z-index:1;
+  }
+  @media (max-width:560px){
+    .board{grid-template-columns:repeat(2, 1fr); gap:12px;}
+  }
+  .cell{
+    aspect-ratio:1;
+    perspective:1200px;
+  }
+  .card{
+    width:100%; height:100%;
+    position:relative;
+    transform-style:preserve-3d;
+    transition:transform 0.7s cubic-bezier(.34,1.56,.64,1);
+    cursor:pointer;
+  }
+  .card.flipped{
+    transform:rotateY(180deg) scale(0.97);
+    cursor:default;
+  }
+  .card.disabled{cursor:default;}
+  .face{
+    position:absolute; inset:0;
+    border-radius:18px;
+    display:flex; align-items:center; justify-content:center;
+    flex-direction:column;
+    backface-visibility:hidden;
+    font-weight:800;
+    transition:all .25s;
+  }
+  .front{
+    color:#2a1245;
+    font-size:clamp(1.6rem, 4.5vw, 2.4rem);
+    box-shadow:0 6px 0 rgba(0,0,0,0.18), 0 8px 20px rgba(0,0,0,0.25);
+  }
+  .front:hover{
+    transform:translateY(-4px) scale(1.04);
+    box-shadow:0 10px 0 rgba(0,0,0,0.18), 0 14px 26px rgba(0,0,0,0.3);
+  }
+  .front:active{transform:translateY(0) scale(0.98);}
+  .front .sparkle{
+    font-size:0.8rem;
+    opacity:0.6;
+    margin-top:2px;
+    letter-spacing:2px;
+  }
+  /* Rainbow card faces by index */
+  .cell:nth-child(10n+1) .front{background:linear-gradient(145deg,#ff8fab,#ff6b9d);}
+  .cell:nth-child(10n+2) .front{background:linear-gradient(145deg,#ffd97d,#ffc75f);}
+  .cell:nth-child(10n+3) .front{background:linear-gradient(145deg,#7ee8c9,#00c2cb);}
+  .cell:nth-child(10n+4) .front{background:linear-gradient(145deg,#b8a4ff,#845ec2); color:#fff;}
+  .cell:nth-child(10n+5) .front{background:linear-gradient(145deg,#ffb380,#ff9472);}
+  .cell:nth-child(10n+6) .front{background:linear-gradient(145deg,#a0e7e5,#4ecdc4);}
+  .cell:nth-child(10n+7) .front{background:linear-gradient(145deg,#fff4a3,#f9f871); color:#5a4d00;}
+  .cell:nth-child(10n+8) .front{background:linear-gradient(145deg,#ffa6c9,#ff6b9d);}
+  .cell:nth-child(10n+9) .front{background:linear-gradient(145deg,#c4b5fd,#845ec2); color:#fff;}
+  .cell:nth-child(10n+10) .front{background:linear-gradient(145deg,#5ee6c9,#00c2cb);}
+
+  .back{
+    background:linear-gradient(145deg,#fff8f0,#f1e9ff);
+    color:#3a2a55;
+    transform:rotateY(180deg);
+    font-size:clamp(2rem, 5vw, 2.8rem);
+    box-shadow:inset 0 0 0 3px rgba(255,255,255,0.5);
+  }
+  .back.used-1{ background:linear-gradient(145deg, var(--team1-a), var(--team1-b)); color:#3a0d1f; }
+  .back.used-2{ background:linear-gradient(145deg, var(--team2-a), var(--team2-b)); color:#003539; }
+
+  /* Modal */
+  .overlay{
+    position:fixed; inset:0;
+    background:rgba(20,8,40,0.78);
+    backdrop-filter:blur(4px);
+    display:none;
+    align-items:center; justify-content:center;
+    z-index:50;
+    padding:16px;
+  }
+  .overlay.show{display:flex;}
+  .modal{
+    background:linear-gradient(160deg,#2a1545,#3d1a5e);
+    border-radius:24px;
+    max-width:640px;
+    width:100%;
+    padding:30px;
+    border:2px solid rgba(255,255,255,0.1);
+    box-shadow:0 20px 60px rgba(0,0,0,0.5);
+    max-height:90vh;
+    overflow-y:auto;
+    animation:popIn .35s cubic-bezier(.34,1.56,.64,1);
+  }
+  @keyframes popIn{
+    from{transform:scale(0.85) translateY(20px); opacity:0;}
+    to{transform:scale(1) translateY(0); opacity:1;}
+  }
+  .modal h2{
+    font-size:1.05rem;
+    margin-bottom:8px;
+    padding:6px 16px;
+    border-radius:20px;
+    display:inline-block;
+    font-weight:700;
+    letter-spacing:1px;
+    text-transform:uppercase;
+  }
+  .modal h2.team1-tag{background:linear-gradient(90deg,var(--team1-a),var(--team1-b)); color:#3a0d1f;}
+  .modal h2.team2-tag{background:linear-gradient(90deg,var(--team2-a),var(--team2-b)); color:#003539;}
+  .modal .q-text{
+    font-size:1.08rem;
+    line-height:1.6;
+    margin:14px 0 20px;
+    color:var(--text);
+  }
+  .options{
+    display:flex;
+    flex-direction:column;
+    gap:11px;
+    margin-bottom:18px;
+  }
+  .option{
+    background:rgba(255,255,255,0.06);
+    border:2px solid rgba(255,255,255,0.1);
+    border-radius:14px;
+    padding:13px 16px;
+    cursor:pointer;
+    transition:all .2s;
+    line-height:1.45;
+    font-size:0.96rem;
+    color:var(--text);
+    display:flex;
+    gap:10px;
+  }
+  .option .opt-letter{
+    flex-shrink:0;
+    width:26px; height:26px;
+    border-radius:50%;
+    background:rgba(255,255,255,0.12);
+    display:flex; align-items:center; justify-content:center;
+    font-weight:700;
+    font-size:0.85rem;
+  }
+  .option:hover{
+    border-color:var(--card-3);
+    background:rgba(0,194,203,0.12);
+    transform:translateX(4px);
+  }
+  .option.correct{
+    background:rgba(61,220,151,0.18);
+    border-color:var(--correct);
+  }
+  .option.correct .opt-letter{background:var(--correct); color:#003d24;}
+  .option.wrong{
+    background:rgba(255,93,108,0.18);
+    border-color:var(--wrong);
+  }
+  .option.wrong .opt-letter{background:var(--wrong); color:#3d0006;}
+  .option.disabled{
+    cursor:default;
+    pointer-events:none;
+  }
+  .option.disabled:not(.correct):not(.wrong){opacity:0.5;}
+  .modal-footer{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    flex-wrap:wrap;
+    gap:12px;
+  }
+  .result-msg{
+    font-weight:700;
+    font-size:1rem;
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .result-msg.correct-msg{color:var(--correct);}
+  .result-msg.wrong-msg{color:var(--wrong);}
+  .btn{
+    background:linear-gradient(90deg,#ff6b9d,#ffc75f);
+    color:#3a0d1f;
+    border:none;
+    border-radius:14px;
+    padding:12px 28px;
+    font-weight:700;
+    cursor:pointer;
+    font-size:0.96rem;
+    transition:transform .15s, box-shadow .15s;
+    box-shadow:0 4px 14px rgba(255,107,157,0.4);
+  }
+  .btn:hover{transform:scale(1.05); box-shadow:0 6px 18px rgba(255,107,157,0.5);}
+  .btn:active{transform:scale(0.97);}
+
+  /* Win modal */
+  .win-modal{
+    text-align:center;
+    background:linear-gradient(160deg,#2a1545,#3d1a5e);
+  }
+  .win-modal .crown{
+    font-size:4rem;
+    margin-bottom:10px;
+    animation:bounce 1.2s ease-in-out infinite;
+  }
+  @keyframes bounce{
+    0%, 100%{transform:translateY(0);}
+    50%{transform:translateY(-12px);}
+  }
+  .win-modal h2{
+    font-size:1.9rem;
+    margin-bottom:10px;
+    background:linear-gradient(90deg,#ff6b9d,#ffc75f,#00c2cb);
+    -webkit-background-clip:text;
+    background-clip:text;
+    color:transparent;
+    display:block;
+    padding:0;
+  }
+  .win-modal .win-scores{
+    color:var(--text-dim);
+    font-size:1rem;
+    margin-bottom:20px;
+  }
+
+  footer{
+    margin-top:auto;
+    padding-top:24px;
+    color:var(--text-dim);
+    font-size:0.78rem;
+    text-align:center;
+    z-index:1;
+  }
+
+  @media (max-width:560px){
+    .scoreboard{gap:12px;}
+    .team{padding:14px 8px;}
+    .team-score{font-size:1.9rem;}
+  }
+</style>
+</head>
+<body>
+
+<div class="blob blob1"></div>
+<div class="blob blob2"></div>
+<div class="blob blob3"></div>
+
+<div class="header">
+  <div class="badge-row">
+    <span class="mini-badge">10 thẻ bí mật</span>
+    <span class="mini-badge">2 đội thi đấu</span>
+    <span class="mini-badge">PPDH khám phá</span>
+  </div>
+  <h1>Đấu Trường Khám Phá</h1>
+  <p class="subtitle">Lật thẻ - Trả lời - Giành điểm! Môn Tin học</p>
+</div>
+
+<div class="scoreboard">
+  <div class="team team1 active" id="teamCard1">
+    <div class="team-content">
+      <span class="team-icon">🚀</span>
+      <div class="team-name">Đội 1</div>
+      <div class="team-score" id="score1">0</div>
+      <div class="turn-tag">Đang chọn</div>
+    </div>
+  </div>
+  <div class="team team2" id="teamCard2">
+    <div class="team-content">
+      <span class="team-icon">⚡</span>
+      <div class="team-name">Đội 2</div>
+      <div class="team-score" id="score2">0</div>
+      <div class="turn-tag">Đang chọn</div>
+    </div>
+  </div>
+</div>
+
+<div class="board" id="board"></div>
+
+<div class="overlay" id="overlay">
+  <div class="modal" id="modal">
+    <h2 id="modalTeam">Lượt của Đội 1</h2>
+    <div class="q-text" id="qText"></div>
+    <div class="options" id="options"></div>
+    <div class="modal-footer">
+      <div class="result-msg" id="resultMsg"></div>
+      <button class="btn" id="continueBtn" style="display:none;">Tiếp tục →</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="winOverlay">
+  <div class="modal win-modal">
+    <div class="crown">🏆</div>
+    <h2 id="winText"></h2>
+    <p class="win-scores" id="winScores"></p>
+    <button class="btn" id="resetBtn">Chơi lại</button>
+  </div>
+</div>
+
+<footer>10 ô số bí mật · Đội 1 đi trước · Trả lời đúng được +10 điểm cho đội đang chọn</footer>
+
+<script>
+const questions = [
+  {
+    text: "Câu 1: Trong tiết học Tin học về 'Câu lệnh rẽ nhánh if', thay vì giải thích cú pháp ngay từ đầu, giáo viên đưa ra 3 đoạn mã Python mẫu thực hiện các bài toán thực tế khác nhau và yêu cầu học sinh quan sát, tìm ra điểm chung về cấu trúc. Hành động này phản ánh đặc điểm cốt lõi nào của dạy học khám phá theo giáo trình?",
+    options: [
+      "Nội dung dạy học cần được ẩn giấu, công việc của học sinh là tự khám phá ra ý nghĩa điều cần học.",
+      "Giáo viên giảng giải lý thuyết trước, học sinh thực hành luyện tập theo mẫu sau.",
+      "Học sinh ghi nhớ có tình tiết thông qua một trò chơi đóng vai giả định.",
+      "Giáo viên tối ưu hóa thời gian bằng cách trực tiếp cung cấp thuật giải cho lớp."
+    ],
+    correct: 0
+  },
+  {
+    text: "Câu 2: Khi tổ chức dạy học khám phá chủ đề 'Thiết bị vào - ra', giáo viên thiết kế một nhiệm vụ học tập mà ở đó giáo viên là người đưa ra câu hỏi/vấn đề cần giải quyết, còn học sinh là người tự tìm kiếm câu trả lời dựa trên tài liệu hỗ trợ. Theo phân loại trong giáo trình, hoạt động này thuộc kiểu dạy học khám phá nào?",
+    options: [
+      "Kiểu 1: Dạy học khám phá có hướng dẫn (Guided discovery learning).",
+      "Kiểu 2: Dạy học khám phá có sự hỗ trợ (Modified discovery learning).",
+      "Kiểu 3: Dạy học khám phá tự do (Free discovery learning).",
+      "Kiểu hỗn hợp truyền thống kết hợp thực hành bắt chước mẫu."
+    ],
+    correct: 0
+  },
+  {
+    text: "Câu 3: Một giáo viên Tin học THPT cho rằng: 'Dạy học khám phá tốn quá nhiều thời gian và học sinh rất dễ thất bại trong việc tìm ra công thức chuẩn, do đó không nên áp dụng'. Dựa trên lý luận đổi mới phương pháp ở Chương 3, nhận định nào sau đây là câu trả lời đúng đắn nhất đối với giáo viên này?",
+    options: [
+      "Thất bại và việc thử - sai là một phần quan trọng và cần thiết của tiến trình dạy học khám phá giúp hiểu sâu hơn.",
+      "Nhận định của giáo viên hoàn toàn đúng vì giáo trình khuyên nên tránh tối đa sự thất bại của học sinh.",
+      "Đóng góp của phương pháp khám phá chỉ nhằm thay thế hoàn toàn mọi tiết học truyền thống để tiết kiệm thời gian.",
+      "Học sinh không thể thất bại vì giáo viên luôn là người làm thay toàn bộ các bước khó."
+    ],
+    correct: 0
+  },
+  {
+    text: "Câu 4: Trong quá trình học sinh tự thực hiện nhiệm vụ khám phá thuật toán tìm kiếm, giáo viên nhận thấy một nhóm học sinh đang đi sai hướng và đưa ra một giả thuyết không chính xác. Giáo viên nên xử lý tình huống này như thế nào để đảm bảo tinh thần dạy học khám phá?",
+    options: [
+      "Để học sinh tiếp tục thử nghiệm, đối mặt với kết quả sai để tự điều chỉnh nhận thức sai lệch thông qua phản hồi của nhiệm vụ.",
+      "Yêu cầu nhóm dừng lại ngay lập tức, xóa toàn bộ bài làm và chép lại thuật toán đúng từ sách giáo khoa.",
+      "Phạt nặng các thành viên trong nhóm vì không tập trung nghe giảng bài mới.",
+      "Trực tiếp can thiệp và tự tay sửa mã nguồn hoặc thuật toán cho nhóm để kịp tiến độ của cả lớp."
+    ],
+    correct: 0
+  },
+  {
+    text: "Câu 5: Giáo viên muốn áp dụng phương pháp dạy học khám phá để dạy bài 'Thông tin trong môi trường số'. Theo nguyên tắc 'Đảm bảo sự thống nhất giữa tính vững chắc của tri thức và tính mềm dẻo của tư duy', giáo viên cần chuẩn bị điều gì trước khi yêu cầu học sinh tự tìm tòi?",
+    options: [
+      "Dựa vào vốn kiến thức và kinh nghiệm sẵn có của học sinh làm cơ sở (đòn bẩy) để các em mở rộng và phát hiện ý tưởng mới.",
+      "Cấm học sinh sử dụng bất kỳ kinh nghiệm cá nhân nào để tránh làm nhiễu thông tin khoa học.",
+      "Yêu cầu học sinh học thuộc lòng toàn bộ định nghĩa trước khi bước vào phòng máy.",
+      "Cung cấp một môi trường hoàn toàn không có sự hướng dẫn hay công cụ hỗ trợ nào để học sinh tự do tuyệt đối."
+    ],
+    correct: 0
+  },
+  {
+    text: "Câu 6: Khi học sinh tự khám phá ra một cách định dạng văn bản mới trong phần mềm Word mà giáo viên chưa từng hướng dẫn, học sinh hào hứng giải thích bằng ngôn ngữ cá nhân rất ngây ngô. Giáo viên nên ứng xử như thế nào?",
+    options: [
+      "Khuyến khích học sinh bày tỏ, tôn trọng ngôn ngữ riêng của các em, sau đó hướng dẫn chuẩn hóa theo thuật ngữ Tin học.",
+      "Phê bình học sinh vì sử dụng thuật ngữ không chuẩn xác theo sách giáo khoa.",
+      "Phớt lờ ý kiến đó và tiếp tục giảng bài theo đúng kịch bản slide có sẵn.",
+      "Yêu cầu học sinh giữ im lặng để tránh làm ảnh hưởng đến trật tự chung của lớp học."
+    ],
+    correct: 0
+  },
+  {
+    text: "Câu 7: Theo giáo trình, dạy học khám phá kích thích 'động cơ học tập bên trong' của học sinh mạnh mẽ hơn các tác động bên ngoài. Biểu hiện nào sau đây minh chứng cho động cơ bên trong này?",
+    options: [
+      "Học sinh cảm thấy thỏa mãn khi tự tìm ra kết quả và có ham muốn hướng tới những nhiệm vụ học tập khó hơn.",
+      "Học sinh chăm chỉ làm bài chỉ để được giáo viên khen ngợi và cho điểm cao.",
+      "Học sinh làm bài vì sợ bị phạt hoặc bị lưu ban.",
+      "Học sinh sao chép mã nguồn của bạn để nhanh chóng hoàn thành nhiệm vụ được giao."
+    ],
+    correct: 0
+  },
+  {
+    text: "Câu 8: Một giáo viên muốn tổ chức dạy học khám phá cho bài 'Tạo bài trình chiếu' nhưng phòng máy tính của trường bất ngờ bị mất điện. Để tiếp tục thực hiện phương pháp này một cách linh hoạt, giáo viên nên làm gì?",
+    options: [
+      "Sử dụng các sơ đồ, phiếu học tập in sẵn các thành phần giao diện để học sinh thảo luận, sắp xếp và khám phá tư duy thiết kế bài trình chiếu.",
+      "Cho học sinh nghỉ tự do vì không có máy tính thì không thể tiến hành dạy học khám phá Tin học.",
+      "Chuyển sang phương pháp đọc - chép toàn bộ sách giáo khoa để giữ trật tự lớp.",
+      "Yêu cầu học sinh tự tưởng tượng ra cái máy tính và làm bài tập thực hành trong im lặng."
+    ],
+    correct: 0
+  },
+  {
+    text: "Câu 9: Giáo trình có đề cập: 'Dạy học khám phá làm cho thông tin rõ ràng hơn vì kiến thức được trình bày trong một bối cảnh gắn liền với việc sử dụng nó'. Khi dạy về 'Mạng xã hội', bối cảnh khám phá nào sau đây là phù hợp nhất?",
+    options: [
+      "Giao cho học sinh tình huống phân tích một trường hợp lừa đảo qua mạng có thật và tự rút ra các quy tắc an toàn khi tham gia môi trường số.",
+      "Yêu cầu học sinh chép thuộc lòng 5 tác hại của mạng xã hội được in ở trang cuối sách giáo khoa.",
+      "Chiếu một video giới thiệu lịch sử hình thành các công ty công nghệ lớn trên thế giới.",
+      "Cho học sinh tự do nhắn tin tán gẫu trong suốt tiết học để tự trải nghiệm mạng xã hội."
+    ],
+    correct: 0
+  },
+  {
+    text: "Câu 10: Mối quan hệ giữa 'Dạy học giải quyết vấn đề' và 'Dạy học khám phá' được các nhà nghiên cứu nhận định như thế nào trong giáo trình Phương pháp dạy học Tin học?",
+    options: [
+      "Chúng quan hệ mật thiết với nhau: người học phải biết nhận ra vấn đề, tìm kiếm thông tin, đề xuất và thực hiện chiến lược giải.",
+      "Hai phương pháp này hoàn toàn đối lập và loại trừ nhau trong một kế hoạch bài dạy.",
+      "Dạy học khám phá là một nhánh nhỏ và luôn luôn được thực hiện sau khi giáo viên đã giải quyết xong vấn đề.",
+      "Dạy học giải quyết vấn đề là phương pháp truyền thống, còn dạy học khám phá là phương pháp tích cực."
+    ],
+    correct: 0
+  }
+];
+
+const POINTS = 10;
+
+let scores = [0, 0];
+let currentTeam = 0;
+let answered = new Array(questions.length).fill(false);
+let activeIndex = null;
+let locked = false;
+
+const board = document.getElementById('board');
+const score1El = document.getElementById('score1');
+const score2El = document.getElementById('score2');
+const teamCard1 = document.getElementById('teamCard1');
+const teamCard2 = document.getElementById('teamCard2');
+const overlay = document.getElementById('overlay');
+const modalTeam = document.getElementById('modalTeam');
+const qText = document.getElementById('qText');
+const optionsEl = document.getElementById('options');
+const resultMsg = document.getElementById('resultMsg');
+const continueBtn = document.getElementById('continueBtn');
+const winOverlay = document.getElementById('winOverlay');
+const winText = document.getElementById('winText');
+const winScores = document.getElementById('winScores');
+const resetBtn = document.getElementById('resetBtn');
+
+const STAR_ICONS = ['★','◆','●','▲','♦','✦','✶','✷','✸','✹'];
+
+function shuffleOptions(q){
+  const correctText = q.options[q.correct];
+  const shuffled = [...q.options];
+  for(let i = shuffled.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  q.options = shuffled;
+  q.correct = shuffled.indexOf(correctText);
+}
+
+function shuffleAllQuestions(){
+  questions.forEach(shuffleOptions);
+}
+
+function buildBoard(){
+  board.innerHTML = '';
+  for(let i = 0; i < questions.length; i++){
+    const cell = document.createElement('div');
+    cell.className = 'cell';
+    cell.innerHTML = `
+      <div class="card" data-index="${i}">
+        <div class="face front">
+          <span>${i+1}</span>
+          <span class="sparkle">${STAR_ICONS[i % STAR_ICONS.length]}</span>
+        </div>
+        <div class="face back"></div>
+      </div>
+    `;
+    const cardEl = cell.querySelector('.card');
+    cardEl.addEventListener('click', () => openQuestion(i, cardEl));
+    board.appendChild(cell);
+  }
+}
+
+function updateTurnUI(){
+  teamCard1.classList.toggle('active', currentTeam === 0);
+  teamCard2.classList.toggle('active', currentTeam === 1);
+}
+
+function updateScores(){
+  score1El.textContent = scores[0];
+  score2El.textContent = scores[1];
+}
+
+function bumpScore(teamIdx){
+  const el = teamIdx === 0 ? score1El : score2El;
+  el.classList.add('bump');
+  setTimeout(() => el.classList.remove('bump'), 250);
+}
+
+function openQuestion(index, cardEl){
+  if(answered[index] || locked) return;
+  activeIndex = index;
+  locked = true;
+
+  const q = questions[index];
+  modalTeam.textContent = `Đội ${currentTeam + 1} — Ô số ${index+1}`;
+  modalTeam.className = currentTeam === 0 ? 'team1-tag' : 'team2-tag';
+  qText.textContent = q.text;
+  optionsEl.innerHTML = '';
+  resultMsg.textContent = '';
+  resultMsg.className = 'result-msg';
+  continueBtn.style.display = 'none';
+
+  q.options.forEach((opt, i) => {
+    const div = document.createElement('div');
+    div.className = 'option';
+    div.innerHTML = `<span class="opt-letter">${String.fromCharCode(65+i)}</span><span>${opt}</span>`;
+    div.addEventListener('click', () => selectOption(i, div, cardEl, index));
+    optionsEl.appendChild(div);
+  });
+
+  overlay.classList.add('show');
+}
+
+function selectOption(choice, el, cardEl, qIndex){
+  const q = questions[qIndex];
+  const allOpts = optionsEl.querySelectorAll('.option');
+  allOpts.forEach(o => o.classList.add('disabled'));
+
+  const isCorrect = choice === q.correct;
+  el.classList.add(isCorrect ? 'correct' : 'wrong');
+
+  if(!isCorrect){
+    allOpts[q.correct].classList.add('correct');
+  }
+
+  if(isCorrect){
+    resultMsg.innerHTML = `🎉 Chính xác! Đội ${currentTeam+1} +${POINTS} điểm`;
+    resultMsg.classList.add('correct-msg');
+    scores[currentTeam] += POINTS;
+    bumpScore(currentTeam);
+  } else {
+    resultMsg.innerHTML = `❌ Sai rồi. Đáp án đúng là ${String.fromCharCode(65+q.correct)}`;
+    resultMsg.classList.add('wrong-msg');
+  }
+
+  updateScores();
+
+  answered[qIndex] = true;
+  cardEl.classList.add('flipped', 'disabled');
+  const back = cardEl.querySelector('.back');
+  back.textContent = isCorrect ? '✔' : '✘';
+  back.classList.add(currentTeam === 0 ? 'used-1' : 'used-2');
+
+  continueBtn.style.display = 'inline-block';
+}
+
+continueBtn.addEventListener('click', () => {
+  overlay.classList.remove('show');
+  locked = false;
+
+  currentTeam = 1 - currentTeam;
+  updateTurnUI();
+
+  if(answered.every(a => a)){
+    setTimeout(showWinner, 300);
+  }
+});
+
+function showWinner(){
+  let msg;
+  if(scores[0] > scores[1]){
+    msg = `Đội 1 chiến thắng!`;
+  } else if(scores[1] > scores[0]){
+    msg = `Đội 2 chiến thắng!`;
+  } else {
+    msg = `Hai đội hòa nhau!`;
+  }
+  winText.textContent = msg;
+  winScores.textContent = `Đội 1: ${scores[0]} điểm   •   Đội 2: ${scores[1]} điểm`;
+  winOverlay.classList.add('show');
+}
+
+resetBtn.addEventListener('click', () => {
+  scores = [0, 0];
+  currentTeam = 0;
+  answered = new Array(questions.length).fill(false);
+  locked = false;
+  shuffleAllQuestions();
+  updateScores();
+  updateTurnUI();
+  buildBoard();
+  winOverlay.classList.remove('show');
+});
+
+shuffleAllQuestions();
+buildBoard();
+updateScores();
+updateTurnUI();
+</script>
+
+</body>
+</html>
